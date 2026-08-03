@@ -43,7 +43,7 @@ int main(int arg_len, char* argv[]) {
     if (!TEST) {
         struct timespec begin, end;
         clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
-        int max_epoch = 1;
+        int max_epoch = 100;
         BATCH_TYPE batched = SOME;
         int batch_size = 10;
         MNISTTrainOption option = {.max_epoch = &max_epoch, .batched = &batched, .batch_size = &batch_size};
