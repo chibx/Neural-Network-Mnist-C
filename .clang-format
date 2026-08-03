@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 150
+PointerAlignment: Left
+# AllowShortBlocksOnASingleLine: Never
+# AllowShortFunctionsOnASingleLine: None
+# AllowShortIfStatementsOnASingleLine: Never
+# BraceWrapping:
+#   AfterControlStatement: Always
+#   AfterFunction: False
+# Cpp11BracedListStyle: false
+# BinPackArguments: false
+# AlignAfterOpenBracket: AlwaysBreak
