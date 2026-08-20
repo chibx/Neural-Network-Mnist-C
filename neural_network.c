@@ -446,6 +446,9 @@ void backpropagate(NeuralNetwork* nn, double* expected_outputs) {
 
         // Pre-calculate node deltas to destroy the function pointer bottleneck
         double* node_delta = malloc(cur_layer.length * sizeof(double));
+        if (node_delta == NULL) {
+            print_and_exit("Failed to allocate memory for node_delta");
+        }
         for (int j = 0; j < cur_layer.length; j++) {
             node_delta[j] = nn->activation_dx(cur_layer.arr[j].value) * current_delta[j];
 
