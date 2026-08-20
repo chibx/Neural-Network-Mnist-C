@@ -22,6 +22,6 @@ typedef struct {
 
 double rand_double();
 void print_and_exit(char*);
-void print_mnist_image(float images[], int grid_size, int offset);
+void print_mnist_image(float* images, int grid_size);
 NeuralNetwork* mnist_train(MNISTTrainOption option);
 MNISTTestResult mnist_test(MNISTTestOption option);

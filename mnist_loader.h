@@ -26,15 +26,15 @@ typedef struct {
     int count;
     int rows;
     int cols;
-    float* images;         // Flat array [count * (rows * cols)] normalized to [0, 1]
-    float* labels_one_hot; // Flat array [count * 10]
-    uint8_t* labels_raw;   // Flat array [count]
+    float* images;          // Flat array [count * (rows * cols)] normalized to [0, 1]
+    double* labels_one_hot; // Flat array [count * 10]
+    uint8_t* labels_raw;    // Flat array [count]
 } MnistDataset;
 
 // Core functions
 MnistImageSet parse_mnist_images(const uint8_t* buffer, size_t buffer_size);
 MnistLabelSet parse_mnist_labels(const uint8_t* buffer, size_t buffer_size);
-void one_hot_encode(uint8_t label, float* out_vec, int num_classes);
+void one_hot_encode(uint8_t label, double* out_vec, int num_classes);
 
 // File loading & memory management
 bool load_mnist_dataset(const char* images_path, const char* labels_path, MnistDataset* out_dataset);

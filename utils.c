@@ -12,10 +12,19 @@ const char* TRAINING_IMAGE_PATH = "./train-images.idx3-ubyte";
 const char* TEST_IMAGE_PATH = "./t10k-images.idx3-ubyte";
 const char* TRAINING_LABEL_PATH = "./train-labels.idx1-ubyte";
 const char* TEST_LABEL_PATH = "./t10k-labels.idx1-ubyte";
-int shared[1] = {16};
+int shared[] = {100, 100};
 const IntArray SHARED_HLAYERS = (IntArray){sizeof(shared) / sizeof(int), &shared[0]};
 
 double rand_double() { return rand() / (double)(RAND_MAX + 1u); }
+
+void print_mnist_image(float* images, int grid_size) {
+    for (int i = 0; i < grid_size; i++) {
+        for (int j = 0; j < grid_size; j++) {
+            printf("%c", images[j] != 0.0f ? '0' : '-');
+        }
+        printf("\n");
+    }
+}
 
 void print_and_exit(char* c) {
     fprintf(stderr, "%s\n", c);
@@ -97,8 +106,8 @@ NeuralNetwork* mnist_train(MNISTTrainOption option) {
 
         for (int idx = 0; idx < count; idx++) {
             int shuffled_index = dataset_indices.arr[idx];
-            FloatArray inputs = {num_inputs, &dataset.images[shuffled_index]};
-            cost += nn_train(nn, inputs, &dataset.labels_one_hot[shuffled_index]);
+            FloatArray inputs = {num_inputs, &dataset.images[shuffled_index * num_inputs]};
+            cost += nn_train(nn, inputs, &dataset.labels_one_hot[shuffled_index * num_outputs]);
             // if (nn_has_exploded(nn)) {
             //     fprintf(stderr, "exploded at epoch %d, sample %d, loss=%f\n", nn->epoch, nn->training_index, cost);
             //     break;
@@ -116,18 +125,11 @@ NeuralNetwork* mnist_train(MNISTTrainOption option) {
         printf("Time taken for epoch %d: %lf seconds\n", cur_epoch, time_diff);
     }
 
-    // struct timespec begin, end;
-    // clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
     nn_complete_fitting(nn);
-    // clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-    // completetraining_time += (end.tv_nsec - begin.tv_nsec) / 1000000000.0 + end.tv_sec - begin.tv_sec;
 
     printf("Finished all epochs with average epoch error of %lf\n", epoch_cost / (float)max_epoch);
     free_mnist_dataset(&dataset);
 
-    // printf("Time taken for all forward propagation: %lf seconds\n", forwardprop_time);
-    // printf("Time taken for all complete training: %lf seconds\n", completetraining_time);
-    // printf("Time taken for all backward propagation: %lf seconds\n", backprop_time);
     return nn;
 }
 
@@ -145,7 +147,7 @@ MNISTTestResult mnist_test(MNISTTestOption option) {
     int num_outputs = 10;
     int total_cases = count;
     int total_success = 0;
-    double* outputs = calloc(count * num_outputs, sizeof(double));
+    double* outputs = calloc(num_outputs, sizeof(double));
     if (outputs == NULL) {
         print_and_exit("Failed to allocated memory for the prediction outputs");
     }
@@ -160,20 +162,25 @@ MNISTTestResult mnist_test(MNISTTestOption option) {
 
     NeuralNetwork* nn = create_neural_network(nn_options);
 
+    // int tries = 0;
     for (int idx = 0; idx < total_cases; idx++) {
-        int output_offset = idx * num_outputs;
-        FloatArray inputs = {num_inputs, &dataset.images[idx]};
-        nn_predict(nn, inputs, outputs + output_offset, num_outputs);
+        FloatArray inputs = {num_inputs, &dataset.images[idx * num_inputs]};
+        nn_predict(nn, inputs, outputs, num_outputs);
         double max = -INFINITY;
         int answer_idx = -1;
         for (int i = 0; i < num_outputs; i++) {
-            if (outputs[idx * num_outputs + i] > max) {
-                max = outputs[idx * num_outputs + i];
+            if (outputs[i] > max) {
+                max = outputs[i];
                 answer_idx = i;
             }
         }
 
         if (answer_idx == dataset.labels_raw[idx]) {
+            // if (tries < 10) {
+            //     print_mnist_image(&dataset.images[idx * num_inputs], dataset.rows);
+            //     printf("Expected Digit: %d\n", dataset.labels_raw[idx]);
+            //     tries++;
+            // }
             total_success++;
         }
     }

@@ -37,7 +37,7 @@ int total_weight_count(IntArray* layer_data) {
     int* arr = layer_data->arr;
 
     if (arr == NULL) {
-        return -1;
+        print_and_exit("Memory block passed to `total_weight_count` is null");
     }
 
     for (int i = 0; i < length - 1; i++) {
@@ -63,7 +63,7 @@ extern inline int total_network_neurons(IntArray* layer_data) {
     return sum;
 }
 
-extern inline double cost(const double* restrict output, const float* restrict expected, int number_of_outputs) {
+extern inline double cost(const double* restrict output, const double* restrict expected, int number_of_outputs) {
     double sum = 0;
     for (int i = 0; i < number_of_outputs; i++) {
         sum += pow((output[i] - expected[i]), 2);
@@ -91,16 +91,6 @@ extern inline DoubleArray get_neuron_weight(DoubleArray* weights, IntArray* laye
     }
 
     int next_layer_count = layer_data_arr[cur_layer + 1];
-    // float* _tmp = malloc(next_layer_count * sizeof(float));
-
-    // if (_tmp == NULL) {
-    //     print_and_exit("Failed to allocate array to store neuron weight");
-    // }
-
-    // for (int i = 0; i < next_layer_count; i++) {
-    //     int index = offset + neuron_idx * next_layer_count + i;
-    //     _tmp[i] = weight_arr[index];
-    // }
 
     // Reuse memory
     int index = offset + neuron_idx * next_layer_count;
@@ -213,11 +203,11 @@ void reset_gradient_accumulators(DoubleArray* weight_acc, DoubleArray* biases_ac
     }
 
     for (int i = 0; i < weight_acc->length; i++) {
-        weight_acc->arr[i] = 0.0;
+        weight_acc->arr[i] = 0;
     }
 
     for (int i = 0; i < biases_acc->length; i++) {
-        biases_acc->arr[i] = 0.0;
+        biases_acc->arr[i] = 0;
     }
 }
 
@@ -263,7 +253,7 @@ NeuralNetwork* create_neural_network(NeuralNetworkOptions option) {
         }
 
         for (int i = 0; i < neurons_with_bias; i++) {
-            arr[i] = 0.0f;
+            arr[i] = 0.0;
         }
         bias_arr->length = neurons_with_bias;
         bias_arr->arr = arr;
@@ -307,6 +297,7 @@ NeuralNetwork* create_neural_network(NeuralNetworkOptions option) {
     nn->bias_gradient_accumulator = (DoubleArray){neurons_with_bias};
     nn->weight_gradient_accumulator = (DoubleArray){expected_weight_count};
     nn->training_index = 0;
+    nn->epoch = 0;
 
     if (option.activation_dx != NULL && option.activation_func != NULL) {
         nn->activation_dx = option.activation_dx;
@@ -346,12 +337,12 @@ void free_neural_network(NeuralNetwork* nn) {
 
 void nn_new_epoch(NeuralNetwork* nn, BATCH_TYPE is_batched, int batch_size) {
     nn->epoch++;
-    nn->training_index++;
     nn->is_batched = is_batched;
     if (is_batched == SOME) {
         nn->batch_size = batch_size >= MIN_BATCH_SIZE ? batch_size : MIN_BATCH_SIZE;
     }
 
+    nn->training_index = 0;
     reset_gradient_accumulators(&nn->weight_gradient_accumulator, &nn->bias_gradient_accumulator);
 }
 
@@ -409,7 +400,7 @@ void nn_new_epoch(NeuralNetwork* nn, BATCH_TYPE is_batched, int batch_size) {
 //     free(current_delta);
 // }
 
-void backpropagate(NeuralNetwork* nn, float* expected_outputs) {
+void backpropagate(NeuralNetwork* nn, double* expected_outputs) {
     NeuronArray* layer_data_arr = nn->layers.arr;
     int num_layers = nn->layers.length;
     double* weight_grad_arr = nn->weight_gradient_accumulator.arr;
@@ -488,7 +479,7 @@ void backpropagate(NeuralNetwork* nn, float* expected_outputs) {
     free(prev_delta);
 }
 
-double nn_train(NeuralNetwork* nn, FloatArray inputs, float* restrict expected_outputs) {
+double nn_train(NeuralNetwork* nn, FloatArray inputs, double* restrict expected_outputs) {
     // struct timespec begin, end;
     // clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
     NeuronArray first_layer = nn->layers.arr[0];
@@ -590,6 +581,7 @@ void nn_complete_fitting(NeuralNetwork* nn) {
     }
 
     nn->training_index = 0;
+    reset_gradient_accumulators(&nn->weight_gradient_accumulator, &nn->bias_gradient_accumulator);
 }
 
 void nn_predict(NeuralNetwork* nn, FloatArray inputs, double* outputs, int output_size) {
@@ -627,7 +619,7 @@ void nn_predict(NeuralNetwork* nn, FloatArray inputs, double* outputs, int outpu
     }
 }
 
-extern inline bool manual_json_writer(NeuralNetwork* nn, FILE* file) {
+/* extern inline bool manual_json_writer(NeuralNetwork* nn, FILE* file) {
     fwrite("{\"biases\":[", sizeof(char), 11, file);
 
     const int batch_size = 5 * 1024;
@@ -727,7 +719,7 @@ extern inline bool manual_json_writer(NeuralNetwork* nn, FILE* file) {
     fprintf(file, "%s]}", text_batch);
 
     return true;
-}
+} */
 
 bool nn_export_parameters(char* path, NeuralNetwork* nn) {
     FILE* file = fopen(path, "w");
@@ -786,6 +778,7 @@ bool nn_export_parameters(char* path, NeuralNetwork* nn) {
 
     char* json_string = cJSON_PrintUnformatted(json);
     fwrite(json_string, sizeof(char), strlen(json_string), file);
+    free(json_string);
     // fclose(file);
 
 json_err: {
@@ -874,7 +867,7 @@ ExportParameterReturn nn_load_parameters(char* path) {
 
         int index = 0;
         cJSON* weight = NULL;
-        cJSON_ArrayForEach(weight, biases) {
+        cJSON_ArrayForEach(weight, weights) {
             if (cJSON_IsNumber(weight)) {
                 weight_arr[index] = weight->valuedouble;
             } else {

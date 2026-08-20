@@ -94,7 +94,7 @@ DoubleArray* random_weights(IntArray* layer_data);
 NeuralNetwork* create_neural_network(NeuralNetworkOptions option);
 void free_neural_network(NeuralNetwork* nn);
 void nn_new_epoch(NeuralNetwork* nn, BATCH_TYPE is_batched, int batch_size);
-double nn_train(NeuralNetwork* nn, FloatArray inputs, float* expected_outputs);
+double nn_train(NeuralNetwork* nn, FloatArray inputs, double* expected_outputs);
 void nn_predict(NeuralNetwork* nn, FloatArray inputs, double* outputs, int output_size);
 void nn_complete_fitting(NeuralNetwork* nn);
 bool nn_export_parameters(char* path, NeuralNetwork* nn);

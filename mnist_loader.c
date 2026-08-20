@@ -114,9 +114,9 @@ MnistLabelSet parse_mnist_labels(const uint8_t* buffer, size_t buffer_size) {
     return set;
 }
 
-void one_hot_encode(uint8_t label, float* out_vec, int num_classes) {
+void one_hot_encode(uint8_t label, double* out_vec, int num_classes) {
     for (int i = 0; i < num_classes; i++) {
-        out_vec[i] = (i == label) ? 1.0f : 0.0f;
+        out_vec[i] = (i == label) ? 1.0 : 0.0;
     }
 }
 
@@ -159,7 +159,7 @@ bool load_mnist_dataset(const char* images_path, const char* labels_path, MnistD
     out_dataset->labels_raw = lbl_set.labels;
 
     // Allocate contiguous block for all one-hot labels [count * 10]
-    out_dataset->labels_one_hot = (float*)calloc(out_dataset->count * NUM_CLASSES, sizeof(float));
+    out_dataset->labels_one_hot = (double*)calloc(out_dataset->count * NUM_CLASSES, sizeof(double));
     if (!out_dataset->labels_one_hot) {
         free(out_dataset->images);
         free(out_dataset->labels_raw);

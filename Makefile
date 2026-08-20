@@ -4,3 +4,4 @@ CJSON_DIR = "./pkg/cjson"
 .PHONY: build
 build:
 	@clang -O3 -flto -funroll-loops -fassociative-math -fno-signed-zeros -fno-trapping-math -fno-math-errno -DNDEBUG -lm *.c $(CJSON_DIR)/cJSON.c $(CJSON_DIR)/cJSON_Utils.c -o build/mnist
+# 	@clang -O3 -flto -funroll-loops -DNDEBUG -lm *.c $(CJSON_DIR)/cJSON.c $(CJSON_DIR)/cJSON_Utils.c -o build/mnist
