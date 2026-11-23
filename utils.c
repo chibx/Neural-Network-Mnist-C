@@ -12,7 +12,7 @@ const char* TRAINING_IMAGE_PATH = "./train-images.idx3-ubyte";
 const char* TEST_IMAGE_PATH = "./t10k-images.idx3-ubyte";
 const char* TRAINING_LABEL_PATH = "./train-labels.idx1-ubyte";
 const char* TEST_LABEL_PATH = "./t10k-labels.idx1-ubyte";
-int shared[] = {100, 100};
+int shared[] = {16};
 const IntArray SHARED_HLAYERS = (IntArray){sizeof(shared) / sizeof(int), &shared[0]};
 
 double rand_double() { return rand() / (double)(RAND_MAX + 1u); }

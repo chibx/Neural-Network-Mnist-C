@@ -298,6 +298,7 @@ NeuralNetwork* create_neural_network(NeuralNetworkOptions option) {
     nn->weight_gradient_accumulator = (DoubleArray){expected_weight_count};
     nn->training_index = 0;
     nn->epoch = 0;
+    nn->weights = (DoubleArray){.arr = weights->arr, .length = weights->length};
 
     if (option.activation_dx != NULL && option.activation_func != NULL) {
         nn->activation_dx = option.activation_dx;
@@ -561,30 +562,20 @@ void nn_complete_fitting(NeuralNetwork* nn) {
         for (int j = 0; j < cur_layer.length; j++) {
             double avg_bias_grad = nn->bias_gradient_accumulator.arr[neuron_idx] / sample_count;
             cur_layer.arr[j].bias -= LEARNING_RATE * pow(nn->decay, nn->epoch) * avg_bias_grad;
+            nn->bias_gradient_accumulator.arr[neuron_idx] = 0;
+
             neuron_idx++;
         }
     }
 
-    // neuron_idx = 0;
-    int offset = 0;
-    for (int layer_idx = 0; layer_idx < layer_len - 1; layer_idx++) {
-        const NeuronArray cur_layer = layer_arr[layer_idx];
-        const NeuronArray next_layer = layer_arr[layer_idx + 1];
-        for (int n_idx = 0; n_idx < cur_layer.length; n_idx++) {
-            Neuron* cur_neuron = &cur_layer.arr[n_idx];
-            for (int weight_idx = 0; weight_idx < next_layer.length; weight_idx++) {
-                double avg_weight_grad = nn->weight_gradient_accumulator.arr[offset + n_idx * next_layer.length + weight_idx] / sample_count;
-                double tmp = cur_neuron->weights.arr[weight_idx];
-                cur_neuron->weights.arr[weight_idx] = tmp - LEARNING_RATE * pow(nn->decay, nn->epoch) * avg_weight_grad;
-            }
-            // neuron_idx++;
-        }
-        // neuron_idx = 0;
-        offset += cur_layer.length * next_layer.length;
+    for (int i = 0; i < nn->num_of_weights; i++) {
+        double avg_weight_grad = nn->weight_gradient_accumulator.arr[i] / sample_count;
+        nn->weights.arr[i] -= LEARNING_RATE * pow(nn->decay, nn->epoch) * avg_weight_grad;
+        nn->weight_gradient_accumulator.arr[i] = 0;
     }
 
     nn->training_index = 0;
-    reset_gradient_accumulators(&nn->weight_gradient_accumulator, &nn->bias_gradient_accumulator);
+    // reset_gradient_accumulators(&nn->weight_gradient_accumulator, &nn->bias_gradient_accumulator);
 }
 
 void nn_predict(NeuralNetwork* nn, FloatArray inputs, double* outputs, int output_size) {
@@ -622,108 +613,6 @@ void nn_predict(NeuralNetwork* nn, FloatArray inputs, double* outputs, int outpu
     }
 }
 
-/* extern inline bool manual_json_writer(NeuralNetwork* nn, FILE* file) {
-    fwrite("{\"biases\":[", sizeof(char), 11, file);
-
-    const int batch_size = 5 * 1024;
-    char* text_batch = calloc(batch_size, sizeof(char));
-    int batch_index = 0;
-    if (text_batch == NULL) {
-        return false;
-    }
-
-    char tmp[20] = {0};
-    const int layer_len = nn->layers.length;
-    for (int i = 1; i < layer_len; i++) {
-        NeuronArray cur_layer = nn->layers.arr[i];
-        for (int j = 0; j < cur_layer.length; j++) {
-
-            int written = snprintf(tmp, sizeof(tmp), "%lf", cur_layer.arr[j].bias);
-            if (written >= (int)sizeof(tmp)) {
-                written = sizeof(tmp) - 1;
-            }
-
-            if (batch_index + written + 2 >= batch_size) {
-                if (text_batch[batch_index - 1] == ',') {
-                    text_batch[batch_index - 1] = '\0';
-                }
-                fwrite(text_batch, sizeof(char), strlen(text_batch), file);
-                // Clear the batch sequence and reset the batch counter
-                // for (int i = 0; i < batch_index; i++) {
-                //     text_batch[i] = '\0';
-                // }
-                text_batch[0] = ',';
-                text_batch[1] = '\0';
-                batch_index = 1;
-            }
-
-            for (int k = 0; k < written; k++) {
-                text_batch[batch_index + k] = tmp[k];
-                tmp[k] = '\0';
-            }
-            text_batch[batch_index + written] = ',';
-            batch_index += written + 1;
-            text_batch[batch_index] = '\0';
-
-            // if (j == cur_layer.length - 1 && i == layer_len - 1) {
-            //     if (text_batch[batch_index - 1] == ',') {
-            //         text_batch[batch_index - 1] = '\0';
-            //     }
-            // }
-        }
-    }
-    if (text_batch[batch_index - 1] == ',') {
-        text_batch[batch_index - 1] = '\0';
-    }
-    fprintf(file, "%s],\"weights\":[", text_batch);
-    // for (int i = 0; i < batch_index; i++) {
-    //     text_batch[i] = '\0';
-    // }
-    text_batch[0] = '\0';
-    batch_index = 0;
-
-    // Weights parse logic
-    for (int i = 0; i < layer_len - 1; i++) {
-        NeuronArray cur_layer = nn->layers.arr[i];
-        for (int j = 0; j < cur_layer.length; j++) {
-            Neuron cur_neuron = cur_layer.arr[j];
-            const int neuron_weight_count = cur_neuron.weights.length;
-            for (int k = 0; k < neuron_weight_count; k++) {
-                int written = snprintf(tmp, sizeof(tmp), "%lf", cur_neuron.weights.arr[k]);
-                if (written >= (int)sizeof(tmp)) {
-                    written = sizeof(tmp) - 1;
-                }
-
-                if (batch_index + written + 2 >= batch_size) {
-                    if (text_batch[batch_index - 1] == ',') {
-                        text_batch[batch_index - 1] = '\0';
-                    }
-                    fwrite(text_batch, sizeof(char), strlen(text_batch), file);
-                    // Clear the batch sequence and reset the batch counter
-                    text_batch[0] = ',';
-                    text_batch[1] = '\0';
-                    batch_index = 1;
-                }
-
-                for (int l = 0; l < written; l++) {
-                    text_batch[batch_index + l] = tmp[l];
-                    tmp[l] = '\0';
-                }
-
-                text_batch[batch_index + written] = ',';
-                batch_index += written + 1;
-                text_batch[batch_index] = '\0';
-            }
-        }
-    }
-    if (text_batch[batch_index - 1] == ',') {
-        text_batch[batch_index - 1] = '\0';
-    }
-    fprintf(file, "%s]}", text_batch);
-
-    return true;
-} */
-
 bool nn_export_parameters(char* path, NeuralNetwork* nn) {
     FILE* file = fopen(path, "w");
     if (file == NULL) {
@@ -740,7 +629,7 @@ bool nn_export_parameters(char* path, NeuralNetwork* nn) {
     }
 
     cJSON* json_bias_arr = cJSON_CreateArray();
-    cJSON* json_weight_arr = cJSON_CreateArray();
+    cJSON* json_weight_arr = cJSON_CreateDoubleArray(nn->weights.arr, nn->weights.length);
     if (json_bias_arr == NULL) {
         success = false;
         goto json_err;
@@ -762,32 +651,33 @@ bool nn_export_parameters(char* path, NeuralNetwork* nn) {
         }
     }
 
-    for (int i = 0; i < layer_len - 1; i++) {
-        NeuronArray cur_layer = nn->layers.arr[i];
-        for (int j = 0; j < cur_layer.length; j++) {
-            Neuron cur_neuron = cur_layer.arr[j];
-            const int neuron_weight_count = cur_neuron.weights.length;
-            for (int k = 0; k < neuron_weight_count; k++) {
-                cJSON* weight = cJSON_CreateNumber(cur_neuron.weights.arr[k]);
-                if (weight == NULL) {
-                    success = false;
-                    goto json_err;
-                }
+    // for (int i = 0; i < layer_len - 1; i++) {
+    //     NeuronArray cur_layer = nn->layers.arr[i];
+    //     for (int j = 0; j < cur_layer.length; j++) {
+    //         Neuron cur_neuron = cur_layer.arr[j];
+    //         const int neuron_weight_count = cur_neuron.weights.length;
+    //         for (int k = 0; k < neuron_weight_count; k++) {
+    //             cJSON* weight = cJSON_CreateNumber(cur_neuron.weights.arr[k]);
+    //             if (weight == NULL) {
+    //                 success = false;
+    //                 goto json_err;
+    //             }
 
-                cJSON_AddItemToArray(json_weight_arr, weight);
-            }
-        }
-    }
+    //             cJSON_AddItemToArray(json_weight_arr, weight);
+    //         }
+    //     }
+    // }
 
     char* json_string = cJSON_PrintUnformatted(json);
     fwrite(json_string, sizeof(char), strlen(json_string), file);
     free(json_string);
     // fclose(file);
 
-json_err: {
-    cJSON_Delete(json);
-    fclose(file);
-}
+json_err:
+    {
+        cJSON_Delete(json);
+        fclose(file);
+    }
 
     return success;
 }

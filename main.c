@@ -12,6 +12,7 @@ int main(int arg_len, char* argv[]) {
     srand(time(NULL));
     bool TEST = false;
     if (arg_len > 1 && strcmp(argv[1], "test") == 0) {
+        printf("Test mode activated!");
         TEST = true;
     }
 
@@ -43,7 +44,7 @@ int main(int arg_len, char* argv[]) {
     if (!TEST) {
         struct timespec begin, end;
         clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
-        int max_epoch = 200;
+        int max_epoch = 10;
         BATCH_TYPE batched = SOME;
         int batch_size = 10;
         MNISTTrainOption option = {.max_epoch = &max_epoch, .batched = &batched, .batch_size = &batch_size};

@@ -63,6 +63,7 @@ typedef struct {
     int training_index;
     int epoch;
     int is_batched;
+    DoubleArray weights;
     BATCH_TYPE batch_size;
     double decay;
     ActivationFunction activation_func;
